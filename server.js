@@ -11,6 +11,8 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import cors from "cors";
+import { log } from "console";
+import { resolve } from "path";
 dotenv.config();
 const saltRounds = 10;
 
@@ -38,11 +40,7 @@ app.use(
   })
 );
 
-const corsOptions = {
-  origin: "http://localhost:3000",
-};
-
-app.use(cors(corsOptions));
+app.use(cors());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
