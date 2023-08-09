@@ -165,7 +165,6 @@ app.get("/products", async (req, res) => {
   }
 });
 
-
 app.post("/products", upload.single("image"), async (req, res) => {
   try {
     const foundProduct = await Product.findOne({ name: req.body.name }).exec();
@@ -204,40 +203,41 @@ app.post("/products", upload.single("image"), async (req, res) => {
   }
 });
 
-
-// need to add the new image data and also update the data in the mongodb database
 app.put("/products", upload.single("image"), async (req, res) => {
   try {
     let product = await Product.findOne({ _id: req.body._id }).exec();
-    console.log(product);
-    if (product) {
-      const params = {
+    if (product && product.imageURL != req.body.image) {
+      let params = {
         Bucket: bucketName,
         Key: product.imageName
       }
       const deleteCommand = new DeleteObjectCommand(params);
       await s3.send(deleteCommand);
-    }
+      const imageName = randomImageName();
 
-    const imageName = randomImageName();
+      params = {
+        Bucket: bucketName,
+        Key: imageName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      };
 
-    const params = {
-      Bucket: bucketName,
-      Key: imageName,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-    };
+      const putCommand = new PutObjectCommand(params);
 
-    const putCommand = new PutObjectCommand(params);
+      await s3.send(putCommand);
 
-    await s3.send(putCommand);
+      const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${imageName}`;
 
-    const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${imageName}`;
-    
-    product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock, imageURL: url})
+      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock, imageURL: url})
 
-    await product.save();
-    res.status(201).json({ message: "Product updated successfully." });    
+      await product.save();
+      res.status(201).json({ message: "Product updated successfully." });
+    } else {
+      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock})
+
+      await product.save();
+      res.status(201).json({ message: "Product updated successfully." });
+    }  
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update product." });
@@ -246,7 +246,15 @@ app.put("/products", upload.single("image"), async (req, res) => {
 
 app.delete("/products", async (req, res) => {
   try {
-    const result = await Product.deleteOne({ name: req.body.name });
+    await Product.deleteOne({ name: req.body.name });
+
+    const params = {
+      Bucket: bucketName,
+      Key: req.body.imageName
+    }
+    const deleteCommand = new DeleteObjectCommand(params);
+    await s3.send(deleteCommand);
+
     res.status(201).json({message: "Product deleted successfully!"});
   } catch (err) {
     console.error(err);
