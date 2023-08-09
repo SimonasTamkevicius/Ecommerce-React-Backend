@@ -65,6 +65,7 @@ const productSchema = {
   name: String,
   price: Number,
   stock: Number,
+  description: String,
   imageName: String,
   imageURL: String,
 };
@@ -84,7 +85,7 @@ app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body; // Extract email and password directly
 
-    const foundUser = await User.findOne({ email: email }).exec(); // Use the extracted 'email'
+    const foundUser = await User.findOne({ email: email.toLowerCase() }).exec(); // Use the extracted 'email'
 
     if (foundUser) {
       const result = await bcrypt.compare(password, foundUser.password); // Use the extracted 'password'
@@ -116,7 +117,7 @@ app.post("/login", async (req, res) => {
 
 app.post("/register", async (req, res) => {
   try {
-    const foundUser = await User.findOne({ email: req.body.email }).exec();
+    const foundUser = await User.findOne({ email: req.body.email.toLowerCase() }).exec();
 
     if (foundUser) {
       return res.status(409).json({ message: "User already exists" });
@@ -124,7 +125,7 @@ app.post("/register", async (req, res) => {
 
     const hash = await bcrypt.hash(req.body.password, saltRounds);
     const newUser = new User({
-      email: req.body.email,
+      email: req.body.email.toLowerCase(),
       password: hash,
       role: "User",
     });
@@ -192,6 +193,7 @@ app.post("/products", upload.single("image"), async (req, res) => {
       name: req.body.name,
       price: req.body.price,
       stock: req.body.stock,
+      description: req.body.description,
       imageName: imageName,
       imageURL: url,
     });
@@ -228,12 +230,12 @@ app.put("/products", upload.single("image"), async (req, res) => {
 
       const url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${imageName}`;
 
-      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock, imageURL: url})
+      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock, description: req.body.description, imageURL: url})
 
       await product.save();
       res.status(201).json({ message: "Product updated successfully." });
     } else {
-      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock})
+      product = await Product.findOneAndUpdate({_id: req.body._id}, {name: req.body.name, price: req.body.price, stock: req.body.stock, description: req.body.description})
 
       await product.save();
       res.status(201).json({ message: "Product updated successfully." });
