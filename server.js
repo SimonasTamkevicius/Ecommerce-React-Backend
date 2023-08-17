@@ -13,6 +13,8 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import cors from "cors";
 import jwt from "jsonwebtoken";
+import helmet from "helmet";
+import Stripe from "stripe";
 dotenv.config();
 const saltRounds = 10;
 
@@ -33,20 +35,35 @@ const s3 = new S3Client({
   },
   region: bucketRegion,
 });
+
 const app = express();
+app.use(express.json());
 app.use(
   bodyParser.urlencoded({
     extended: true,
   })
 );
 
-const corsOptions = {
-  origin: true,
-  optionsSuccessStatus: 200,
-  credentials: true
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET);
 
-app.use(cors());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ['*', 'data:'],
+    },
+  })
+);
+
+const corsOptions = {
+  origin: "http://localhost:3000", // Replace with your frontend URL
+  credentials: true, // Allow sending cookies
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 const storage = multer.memoryStorage({
   limits: {
@@ -55,11 +72,13 @@ const storage = multer.memoryStorage({
 });
 const upload = multer({ storage: storage });
 
-const userSchema = {
+const userSchema = new mongoose.Schema({
+  fName: String,
+  lName: String,
   email: String,
   password: String,
   role: String,
-};
+});
 
 const productSchema = {
   name: String,
@@ -74,35 +93,46 @@ const User = new mongoose.model("User", userSchema);
 const Product = new mongoose.model("Product", productSchema);
 
 app.get("/logout", function (req, res) {
-  // Clear the access token from the response headers
   res.clearCookie("access_token");
   console.log("session destroyed");
   res.send("success");
 });
 
+function toTitleCase(str) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
+// USER LOGIN, REGISTER, AND EDIT
 app.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body; // Extract email and password directly
+    const { email, password } = req.body;
 
-    const foundUser = await User.findOne({ email: email.toLowerCase() }).exec(); // Use the extracted 'email'
+    const foundUser = await User.findOne({ email: email.toLowerCase() }).exec();
 
     if (foundUser) {
-      const result = await bcrypt.compare(password, foundUser.password); // Use the extracted 'password'
+      const result = await bcrypt.compare(password, foundUser.password);
 
       if (result) {
-        const accessToken = jwt.sign(foundUser.toJSON(), process.env.ACCESS_TOKEN_SECRET);
+        const accessToken = jwt.sign(foundUser._id.toJSON(), process.env.ACCESS_TOKEN_SECRET);
 
         res.cookie("access_token", accessToken, {
           httpOnly: true,
-          secure: false, // Set to 'true' if using HTTPS
-          maxAge: 7 * 24 * 60 * 60 * 1000, // Expiration time in milliseconds (7 days in this example)
+          secure: true,
+          maxAge: 15 * 60 * 1000,
         });
 
         res.status(200).json({
           message: "Login successful",
           role: foundUser.role,
           accessToken: accessToken,
+          _id: foundUser._id,
+          fName: foundUser.fName,
+          lName: foundUser.lName,
+          email: foundUser.email
         });
       } else {
         res.status(401).json({ error: "Invalid credentials." });
@@ -124,7 +154,16 @@ app.post("/register", async (req, res) => {
     }
 
     const hash = await bcrypt.hash(req.body.password, saltRounds);
+
+    const fName = toTitleCase(req.body.fName);
+    const lName = toTitleCase(req.body.lName);
+    console.log(fName);
+    console.log(lName);
+    
+
     const newUser = new User({
+      fName: fName,
+      lName: lName,
       email: req.body.email.toLowerCase(),
       password: hash,
       role: "User",
@@ -132,26 +171,51 @@ app.post("/register", async (req, res) => {
 
     await newUser.save();
 
-    // Create and sign the access token
-    const accessToken = jwt.sign(newUser.toJSON(), process.env.ACCESS_TOKEN_SECRET);
+    const accessToken = jwt.sign(newUser._id.toJSON(), process.env.ACCESS_TOKEN_SECRET);
 
-    // Set the access token as an HTTP cookie
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: false, // Set to 'true' if using HTTPS
-      maxAge: 7 * 24 * 60 * 60 * 1000, // Expiration time in milliseconds (7 days in this example)
+      secure: true,
+      maxAge: 15 * 60 * 1000,
     });
 
     res.status(201).json({
       message: "User added successfully",
       role: newUser.role,
       accessToken: accessToken,
+      _id: foundUser._id,
+      fName: foundUser.fName,
+      lName: foundUser.lName,
+      email: foundUser.email
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to register user." });
   }
 });
 
+app.put("/edit-user", async (req, res) => {
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: req.body._id },
+      { fName: req.body.fName, lName: req.body.lName, email: req.body.email },
+      { new: true }
+    ).exec();
+
+    if (!updatedUser) {
+      res.status(500).json({ error: "Could not find user in the database." });
+    }
+
+    res.status(201).json({
+      fName: updatedUser.fName,
+      lName: updatedUser.lName,
+      email: updatedUser.email
+    });
+  } catch (err) {
+    res.status(500).json({ err: err });
+  }
+});
+
+// PRODUCT GET, POST, PUT, DELETE FUNCTIONALITY
 app.get("/products", async (req, res) => {
   try {
     const foundProducts = await Product.find({}).exec();
@@ -263,6 +327,46 @@ app.delete("/products", async (req, res) => {
     res.status(500).json({ error: "Failed to delete product." });
   }
 });
+
+app.post('/create-checkout-session', async (req, res) => {
+  try {
+    const cartItems = req.body.cart;
+    console.log(cartItems);
+
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({ error: 'Cart is empty.' });
+    }
+
+    const lineItems = cartItems.map((cartItem) => {
+      return {
+        price_data: {
+          currency: 'cad',
+          product_data: {
+            name: cartItem.name,
+          },
+          unit_amount: cartItem.price * 100,
+        },
+        quantity: cartItem.qty,
+      };
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${process.env.CLIENT_URL}/UserProfile`,
+      cancel_url: `${process.env.CLIENT_URL}/Register`,
+      automatic_tax: {
+        "enabled": true,
+      }
+    });
+
+    res.json({url: session.url});
+  } catch (error) {
+    console.error('Error creating checkout session:', error.message);
+    res.status(500).send('Error creating checkout session');
+  }
+});
+
 
 app.listen(9000, function () {
   console.log("Listening on port 9000");
