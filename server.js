@@ -58,8 +58,8 @@ app.use(
 );
 
 const corsOptions = {
-  origin: "http://localhost:3000", // Replace with your frontend URL
-  credentials: true, // Allow sending cookies
+  origin: "https://ecommerce-bead-store.onrender.com",
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
