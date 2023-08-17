@@ -331,7 +331,6 @@ app.delete("/products", async (req, res) => {
 app.post('/create-checkout-session', async (req, res) => {
   try {
     const cartItems = req.body.cart;
-    console.log(cartItems);
 
     if (!cartItems || cartItems.length === 0) {
       return res.status(400).json({ error: 'Cart is empty.' });
@@ -344,7 +343,7 @@ app.post('/create-checkout-session', async (req, res) => {
           product_data: {
             name: cartItem.name,
           },
-          unit_amount: cartItem.price * 100,
+          unit_amount: (cartItem.price * 100).toFixed(0),
         },
         quantity: cartItem.qty,
       };
@@ -353,8 +352,8 @@ app.post('/create-checkout-session', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.CLIENT_URL}/UserProfile`,
-      cancel_url: `${process.env.CLIENT_URL}/Register`,
+      success_url: `${process.env.CLIENT_URL}/OrderSuccess`,
+      cancel_url: `${process.env.CLIENT_URL}/Cart`,
       automatic_tax: {
         "enabled": true,
       }
