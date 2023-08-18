@@ -58,7 +58,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-n3kvkiocy-simonastamkevicius.vercel.app/"],
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-n3kvkiocy-simonastamkevicius.vercel.app"],
   credentials: true,
 };
 
