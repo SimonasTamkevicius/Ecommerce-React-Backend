@@ -366,10 +366,6 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-app.get("*", (_, res) => {
-  res.sendFile(path.join(__dirname, "./client/build/index.html"));
-});
-
 const PORT = process.env.PORT || 9000;
 
 app.listen(PORT, function () {
