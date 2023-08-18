@@ -341,8 +341,8 @@ app.post('/create-checkout-session', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.CLIENT_URL}/OrderSuccess`,
-      cancel_url: `${process.env.CLIENT_URL}/Cart`,
+      success_url: `${process.env.CLIENT_URL}/#/OrderSuccess`,
+      cancel_url: `${process.env.CLIENT_URL}/#/Cart`,
       automatic_tax: {
         "enabled": true,
       }
