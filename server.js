@@ -47,7 +47,7 @@ app.use(
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app"],
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http:/localhost:3000"],
   credentials: true,
 };
 
@@ -355,13 +355,12 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
+// const __dirname = path.dirname(new URL(import.meta.url).pathname);
+// app.use(express.static(path.join(__dirname, "client/build")));
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-app.use(express.static(path.join(__dirname, "client/build")));
-
-app.get("*", (_, res) => {
-  res.sendFile(path.join(__dirname, "./client/build/index.html"));
-});
+// app.get("*", (_, res) => {
+//   res.sendFile(path.join(__dirname, "./client/build/index.html"));
+// });
 
 const PORT = process.env.PORT || 9000;
 
