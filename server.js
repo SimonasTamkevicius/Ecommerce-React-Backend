@@ -47,7 +47,7 @@ app.use(
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "ecommerce-react-website-six.vercel.app"],
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app"],
   credentials: true,
 };
 
