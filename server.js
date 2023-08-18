@@ -14,6 +14,7 @@ import bcrypt from "bcrypt";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
+import path from "path";
 dotenv.config();
 const saltRounds = 10;
 
@@ -352,6 +353,10 @@ app.post('/create-checkout-session', async (req, res) => {
     console.error('Error creating checkout session:', error.message);
     res.status(500).send('Error creating checkout session');
   }
+});
+
+app.get("*", (_, res) => {
+  res.sendFile(path.join(__dirname, "./client/build/index.html"));
 });
 
 const PORT = process.env.PORT || 9000;
