@@ -44,9 +44,6 @@ app.use(
   })
 );
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
-app.use(express.static(path.join(__dirname, "client/build")));
-
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
@@ -357,6 +354,10 @@ app.post('/create-checkout-session', async (req, res) => {
     res.status(500).send('Error creating checkout session');
   }
 });
+
+
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+app.use(express.static(path.join(__dirname, "client/build")));
 
 app.get("*", (_, res) => {
   res.sendFile(path.join(__dirname, "./client/build/index.html"));
