@@ -44,6 +44,8 @@ app.use(
   })
 );
 
+app.use(express.static(path.join(__dirname, "client/build")));
+
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
