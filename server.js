@@ -58,7 +58,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "http://localhost:3000"],
+  origin: "https://ecommerce-bead-store.onrender.com",
   credentials: true,
 };
 
