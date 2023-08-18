@@ -58,7 +58,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: "https://ecommerce-bead-store.onrender.com",
+  origin: ["https://ecommerce-bead-store.onrender.com", "http://localhost:3000"],
   credentials: true,
 };
 
@@ -366,6 +366,8 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-app.listen(9000, function () {
+const PORT = process.env.PORT || 9000;
+
+app.listen(PORT, function () {
   console.log("Listening on port 9000");
 });
