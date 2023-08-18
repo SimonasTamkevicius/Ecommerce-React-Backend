@@ -44,6 +44,7 @@ app.use(
   })
 );
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 app.use(express.static(path.join(__dirname, "client/build")));
 
 const stripe = new Stripe(process.env.STRIPE_SECRET);
