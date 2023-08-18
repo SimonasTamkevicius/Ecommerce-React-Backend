@@ -58,7 +58,7 @@ app.use(
 );
 
 const corsOptions = {
-  origin: "https://ecommerce-bead-store.onrender.com",
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-n3kvkiocy-simonastamkevicius.vercel.app/"],
   credentials: true,
 };
 
@@ -235,7 +235,7 @@ app.post("/products", upload.single("image"), async (req, res) => {
     const foundProduct = await Product.findOne({ name: req.body.name }).exec();
 
     if (foundProduct) {
-      return res.redirect("/addproduct");
+      return;
     }
 
     const imageName = randomImageName();
