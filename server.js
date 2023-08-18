@@ -13,7 +13,6 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import cors from "cors";
 import jwt from "jsonwebtoken";
-import helmet from "helmet";
 import Stripe from "stripe";
 dotenv.config();
 const saltRounds = 10;
@@ -45,17 +44,6 @@ app.use(
 );
 
 const stripe = new Stripe(process.env.STRIPE_SECRET);
-
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      imgSrc: ['*', 'data:'],
-    },
-  })
-);
 
 const corsOptions = {
   origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-n3kvkiocy-simonastamkevicius.vercel.app"],
