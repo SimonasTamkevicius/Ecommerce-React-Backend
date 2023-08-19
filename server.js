@@ -14,7 +14,6 @@ import bcrypt from "bcrypt";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
-import path from "path";
 dotenv.config();
 const saltRounds = 10;
 
@@ -47,7 +46,7 @@ app.use(
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http:/localhost:3000"],
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http://localhost:3000"],
   credentials: true,
 };
 
@@ -60,6 +59,23 @@ const storage = multer.memoryStorage({
   },
 });
 const upload = multer({ storage: storage });
+
+const orderSchema = {
+  orderNumber: Number,
+  userID: String,
+  totalItems: Number,
+  date: String,
+  total: Number,
+  items: [
+    {
+      itemID: String,
+      name: String,
+      price: Number,
+      quantity: Number,
+      imageURL: String,
+    }
+  ],
+}
 
 const userSchema = new mongoose.Schema({
   fName: String,
@@ -80,6 +96,7 @@ const productSchema = {
 
 const User = new mongoose.model("User", userSchema);
 const Product = new mongoose.model("Product", productSchema);
+const Order = new mongoose.model("Order", orderSchema);
 
 app.get("/logout", function (req, res) {
   res.clearCookie("access_token");
@@ -340,12 +357,20 @@ app.post('/create-checkout-session', async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
       line_items: lineItems,
+      shipping_address_collection: {
+        allowed_countries: ['US', 'CA'],
+      },
+      shipping_options: [
+        {
+          shipping_rate: 'shr_1NgeexBOwjCk5ssXZtsy0p51',
+        },
+      ],
       mode: 'payment',
       success_url: `${process.env.CLIENT_URL}/#/OrderSuccess`,
       cancel_url: `${process.env.CLIENT_URL}/#/Cart`,
       automatic_tax: {
         "enabled": true,
-      }
+      },
     });
 
     res.json({url: session.url});
@@ -355,12 +380,79 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-// const __dirname = path.dirname(new URL(import.meta.url).pathname);
-// app.use(express.static(path.join(__dirname, "client/build")));
+app.get("/orders", async (req, res) => {
+  try {
+    const userID = req.query._id;
+    const userRole = req.query.role;
+    let orders;
 
-// app.get("*", (_, res) => {
-//   res.sendFile(path.join(__dirname, "./client/build/index.html"));
-// });
+    if (userRole === "Admin") {
+      // Get all orders from the database and send them to the client side as a JSON object
+      orders = await Order.find({}).exec();
+      res.json(orders);
+    } else {
+      orders = await Order.find({userID: userID}).exec();
+      res.json(orders);
+    }
+  } catch (err) {
+    console.error('Error getting orders from the database: ', err.message);
+    res.status(500).send('Error getting orders.');
+  }
+});
+
+
+let lastOrderNumber = 100000;
+app.post("/add-order", async (req, res) => {
+  try {
+    const cartItems = req.body.cart;
+    const userId = req.body.user._id;
+
+    let totalPriceOverall = 0;
+    let totalItems = 0;
+
+    const items = cartItems.map((cartItem) => {
+      let price = parseFloat(((parseInt(cartItem.qty)*parseFloat(cartItem.price)).toFixed(2)));
+      let quantity = parseInt(cartItem.qty);
+      totalPriceOverall = totalPriceOverall + price;
+      totalItems = totalItems + quantity;
+      return {
+        itemID: cartItem._id,
+        name: cartItem.name,
+        quantity: quantity,
+        price: price,
+        imageURL: cartItem.imageURL
+      }
+    })
+
+    lastOrderNumber++;
+
+    const currentDate = new Date();
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June', 
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = months[currentDate.getMonth()];
+    const day = currentDate.getDate();
+    const year = currentDate.getFullYear();
+
+    const formattedDate = `${month} ${day}, ${year}`;
+
+    const order = new Order ({
+      orderNumber: lastOrderNumber,
+      userID: userId,
+      total: (totalPriceOverall + 10).toFixed(2),
+      totalItems: totalItems,
+      date: formattedDate,
+      items: items
+    });
+
+    await order.save()
+    res.status(201).json({ message: "Order added successfully!" });
+  } catch (error) {
+    console.error('Error adding order to database:', error.message);
+    res.status(500).send('Error adding order to database');
+  }
+})
 
 const PORT = process.env.PORT || 9000;
 
