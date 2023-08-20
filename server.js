@@ -366,8 +366,8 @@ app.post('/create-checkout-session', async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.CLIENT_URL}/#/OrderSuccess`,
-      cancel_url: `${process.env.CLIENT_URL}/#/Cart`,
+      success_url: `http://localhost:3000/#/OrderSuccess`,
+      cancel_url: `http://localhost:3000/#/Cart`,
       automatic_tax: {
         "enabled": true,
       },
@@ -410,19 +410,28 @@ app.post("/add-order", async (req, res) => {
     let totalPriceOverall = 0;
     let totalItems = 0;
 
-    const items = cartItems.map((cartItem) => {
-      let price = parseFloat(((parseInt(cartItem.qty)*parseFloat(cartItem.price)).toFixed(2)));
+    const items = await Promise.all(cartItems.map(async (cartItem) => {
+      let price = parseFloat(((parseInt(cartItem.qty) * parseFloat(cartItem.price)).toFixed(2)));
       let quantity = parseInt(cartItem.qty);
       totalPriceOverall = totalPriceOverall + price;
       totalItems = totalItems + quantity;
+
+      const foundItem = await Product.findOneAndUpdate(
+        { _id: cartItem._id },
+        { $inc: { stock: -quantity } }
+      );
+      if (!foundItem) {
+        console.log("Product failed to update.");
+      }
+
       return {
         itemID: cartItem._id,
         name: cartItem.name,
         quantity: quantity,
         price: price,
         imageURL: cartItem.imageURL
-      }
-    })
+      };
+    }));
 
     lastOrderNumber++;
 
