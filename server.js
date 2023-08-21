@@ -473,16 +473,22 @@ app.post("/add-order", async (req, res) => {
 })
 
 app.get("/users", async (req, res) => {
-  try{
-    let users = [];
-    const user = req.body.user;
-    if (user.loggedIn && user.role === "Admin") {
-      users = User.find({}).exec();
-    }
-    if (users) {
-      res.status(201).json(users);
+  try {
+    let users;
+    const loggedIn = req.query.loggedIn;
+    const role = req.query.role;
+    
+    if (loggedIn && role === "Admin") {
+      users = await User.find({}).exec();
+      
+      if (users) {
+        res.status(201).json(users);
+      } else {
+        throw new Error("No Users Found");
+      }
     } else {
-      throw Error("No Users Found");
+      // Handle the case where conditions are not met
+      res.status(400).json({ message: "Access denied." });
     }
   } catch (err) {
     console.log(err);
