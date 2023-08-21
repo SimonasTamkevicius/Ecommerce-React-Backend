@@ -459,7 +459,25 @@ app.post("/add-order", async (req, res) => {
     res.status(201).json({ message: "Order added successfully!" });
   } catch (error) {
     console.error('Error adding order to database:', error.message);
-    res.status(500).send('Error adding order to database');
+    res.status(500).send('Error adding order to database.');
+  }
+})
+
+app.get("/users", async (req, res) => {
+  try{
+    let users = [];
+    const user = req.body.user;
+    if (user.loggedIn && user.role === "Admin") {
+      users = User.find({}).exec();
+    }
+    if (users) {
+      res.status(201).json(users);
+    } else {
+      throw Error("No Users Found");
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Error getting users.');
   }
 })
 
