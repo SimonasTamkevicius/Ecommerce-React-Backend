@@ -17,7 +17,16 @@ import Stripe from "stripe";
 dotenv.config();
 const saltRounds = 10;
 
-mongoose.connect(process.env.URI);
+// mongoose.connect(process.env.URI);
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
+  }
+}
 
 const randomImageName = (bytes = 32) =>
   crypto.randomBytes(bytes).toString("hex");
@@ -483,6 +492,8 @@ app.get("/users", async (req, res) => {
 
 const PORT = process.env.PORT || 9000;
 
-app.listen(PORT, function () {
-  console.log("Listening on port 9000");
-});
+connectDB().then(() => {
+  app.listen(PORT, () => {
+      console.log("listening for requests");
+  })
+})
