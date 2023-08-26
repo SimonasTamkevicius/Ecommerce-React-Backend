@@ -198,10 +198,10 @@ app.post("/register", async (req, res) => {
       message: "User added successfully",
       role: newUser.role,
       accessToken: accessToken,
-      _id: foundUser._id,
-      fName: foundUser.fName,
-      lName: foundUser.lName,
-      email: foundUser.email
+      _id: newUser._id,
+      fName: newUser.fName,
+      lName: newUser.lName,
+      email: newUser.email
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to register user." });
