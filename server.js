@@ -5,7 +5,6 @@ import multer from "multer";
 import {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
@@ -17,7 +16,6 @@ import Stripe from "stripe";
 dotenv.config();
 const saltRounds = 10;
 
-// mongoose.connect(process.env.URI);
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.URI);
@@ -60,7 +58,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 const storage = multer.memoryStorage({
   limits: {
