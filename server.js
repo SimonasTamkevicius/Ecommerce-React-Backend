@@ -512,10 +512,16 @@ app.get("/users", async (req, res) => {
   }
 })
 
-const PORT = process.env.PORT || 9000;
+// const PORT = process.env.PORT || 9000;
+
+// connectDB().then(() => {
+//   app.listen(PORT, () => {
+//       console.log("listening for requests");
+//   })
+// })
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
-      console.log("listening for requests");
+  app.listen(9000, () => {
+      console.log("Listening on port 9000!");
   })
 })
