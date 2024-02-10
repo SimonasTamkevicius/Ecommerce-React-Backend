@@ -17,16 +17,6 @@ import Stripe from "stripe";
 dotenv.config();
 const saltRounds = 10;
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.log(error);
-    process.exit(1);
-  }
-}
-
 const randomImageName = (bytes = 32) =>
   crypto.randomBytes(bytes).toString("hex");
 
@@ -43,6 +33,16 @@ const s3 = new S3Client({
   region: bucketRegion,
 });
 
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
+  }
+}
+
 const app = express();
 app.use(express.json());
 app.use(
@@ -53,20 +53,19 @@ app.use(
 
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
-const corsOptions = {
-  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http://localhost:3000"],
-  credentials: true
-};
-
-app.use(cors(corsOptions));
-
-
 const storage = multer.memoryStorage({
   limits: {
     fieldSize: 50 * 1024 * 1024,
   },
 });
 const upload = multer({ storage: storage });
+
+const corsOptions = {
+  origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http://localhost:3000"],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 const orderSchema = {
   orderNumber: String,
