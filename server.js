@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 import multer from "multer";
 import {
   S3Client,
@@ -54,7 +55,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 const corsOptions = {
   origin: ["https://ecommerce-bead-store.onrender.com", "https://ecommerce-react-website-six.vercel.app", "http://localhost:3000"],
-  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -68,7 +68,7 @@ const storage = multer.memoryStorage({
 const upload = multer({ storage: storage });
 
 const orderSchema = {
-  orderNumber: Number,
+  orderNumber: String,
   userID: String,
   totalItems: Number,
   date: String,
@@ -372,11 +372,17 @@ app.post('/create-checkout-session', async (req, res) => {
           shipping_rate: 'shr_1NgeexBOwjCk5ssXZtsy0p51',
         },
       ],
+      custom_fields: [
+        {
+          name: 'Order Number',
+          value: '123456789',
+        },
+      ],
       mode: 'payment',
       success_url: `http://localhost:3000/#/OrderSuccess`,
       cancel_url: `http://localhost:3000/#/Cart`,
       automatic_tax: {
-        "enabled": true,
+        enabled: true,
       },
     });
 
@@ -407,8 +413,6 @@ app.get("/orders", async (req, res) => {
   }
 });
 
-
-let lastOrderNumber = 100000;
 app.post("/add-order", async (req, res) => {
   try {
     const cartItems = req.body.cart;
@@ -440,8 +444,6 @@ app.post("/add-order", async (req, res) => {
       };
     }));
 
-    lastOrderNumber++;
-
     const currentDate = new Date();
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June', 
@@ -453,8 +455,10 @@ app.post("/add-order", async (req, res) => {
 
     const formattedDate = `${month} ${day}, ${year}`;
 
+    const objectId = new ObjectId();
+
     const order = new Order ({
-      orderNumber: lastOrderNumber,
+      orderNumber: objectId,
       userID: userId,
       total: (totalPriceOverall + 10).toFixed(2),
       totalItems: totalItems,
@@ -465,6 +469,20 @@ app.post("/add-order", async (req, res) => {
     await order.save()
     res.status(201).json({ message: "Order added successfully!" });
   } catch (error) {
+    const cartItems = req.body.cart;
+    const items = await Promise.all(cartItems.map(async (cartItem) => {
+      let quantity = parseInt(cartItem.qty);
+      const foundItem = await Product.findOneAndUpdate(
+        { _id: cartItem._id },
+        { $inc: { stock: +quantity } }
+      );
+      if (!foundItem) {
+        console.log("Product failed to update.");
+      }
+    }))
+    if (!items) {
+      console.log("Items failed to update.");
+    }
     console.error('Error adding order to database:', error.message);
     res.status(500).send('Error adding order to database.');
   }
